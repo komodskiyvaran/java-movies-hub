@@ -3,49 +3,39 @@ package ru.practicum.moviehub.store;
 import ru.practicum.moviehub.model.Movie;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-
+import java.util.Optional;
 
 public class MoviesStore {
-    private int count;
-    private final HashMap<Integer, Movie> store;
+    private final List<Movie> store = new ArrayList<>();
 
-    public MoviesStore() {
-        this.store = new HashMap<>();
-        count = 0;
+    public Movie add(Movie movie) {
+        store.add(movie);
+        return movie;
     }
 
-    public void add(Movie movie) {
-        store.put(count, movie);
-        count++;
-    }
-
-    public Movie getById(int id) {
-        return store.get(id);
+    public Optional<Movie> getById(int id) {
+        return store.stream()
+                .filter(movie -> movie.getId() == id)
+                .findFirst();
     }
 
     public List<Movie> getMovies() {
-        return new ArrayList<>(store.values());
+        return new ArrayList<>(store);
     }
 
     public List<Movie> getByYear(int year) {
-        List<Movie> resList = new ArrayList<>();
-        for (Movie movie : store.values()){
-            if (movie.getYear() == year) {
-                resList.add(movie);
-            }
-        }
-        return resList;
+        return store.stream()
+                .filter(movie -> movie.getYear() == year)
+                .toList();
     }
 
     public boolean delete(int id) {
-        if (store.containsKey(id)) {
-            store.remove(id);
-            return true;
-        } else return false;
+        return store.removeIf(movie -> movie.getId() == id);
     }
+
     public void clear() {
         store.clear();
+        Movie.resetNextId();  // нужен метод в Movie
     }
 }

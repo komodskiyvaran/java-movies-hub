@@ -3,16 +3,33 @@ package ru.practicum.moviehub.model;
 import java.util.Objects;
 
 public class Movie {
+    private static int nextId;
+
     private final String title;
     private final int year;
+    private final int id;
 
     public Movie(String movie, int year) {
+        this.id = nextId++;
         this.title = movie;
         this.year = year;
     }
 
     public String getTitle() {
         return title;
+    }
+
+    @Override
+    public String toString() {
+        return "Movie{" +
+                "ID ='" + id + '\'' +
+                "title='" + title + '\'' +
+                ", year=" + year +
+                '}';
+    }
+
+    public int getId() {
+        return id;
     }
 
     public int getYear() {
@@ -24,11 +41,17 @@ public class Movie {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Movie movie = (Movie) o;
-        return year == movie.year && Objects.equals(title, movie.title);
+        return year == movie.year &&
+                id == movie.id &&
+                Objects.equals(title, movie.title);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(title, year);
+        return Objects.hash(title, year, id);
+    }
+
+    public static void resetNextId() {
+        nextId = 0;
     }
 }

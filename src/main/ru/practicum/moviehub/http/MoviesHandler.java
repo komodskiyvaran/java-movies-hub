@@ -3,11 +3,14 @@ package ru.practicum.moviehub.http;
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import ru.practicum.moviehub.api.ErrorResponse;
 import ru.practicum.moviehub.model.Movie;
 import ru.practicum.moviehub.store.MoviesStore;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 
 public class MoviesHandler extends BaseHttpHandler implements HttpHandler {
@@ -26,17 +29,58 @@ public class MoviesHandler extends BaseHttpHandler implements HttpHandler {
 
         switch (endpoint) {
             case GET_MOVIES -> handleGetMovies(ex);
-            //case GET_MOVIES_BY_YEAR -> handleGetMoviesByYear(ex, ex.getRequestURI().getQuery());
+            case GET_MOVIE_BY_ID -> handleGetMovieByID(ex);
+            case GET_MOVIES_BY_YEAR -> handleGetMoviesByYear(ex);
+            case POST_MOVIE -> handlePostMovie(ex);
         }
     }
 
     private void handleGetMovies(HttpExchange ex) throws IOException {
-        List<Movie> movies = store.getMovies();  // или store.getMovies()
-        String json = gson.toJson(movies);
-        sendJson(ex, 200, json);
+        List<Movie> movies = store.getMovies();
+        sendJson(ex, 200, gson.toJson(movies));
     }
 
-    //private void handleGetMoviesByYear(HttpExchange ex, String query) {}
+    private void handleGetMovieByID(HttpExchange ex) throws IOException {
+        String[] pathParts = ex.getRequestURI().getPath().split("/");
+        try {
+            int id = Integer.parseInt(pathParts[2]);
+            Optional<Movie> movie = store.getById(id);
+
+            System.out.println("Ищем фильм с id: " + id);
+            System.out.println("Все фильмы в store: " + store.getMovies());
+
+            if (movie.isEmpty()) {
+                String errorJson = gson.toJson(new ErrorResponse("Фильм не найден"));
+                sendJson(ex, 404, errorJson);
+                return;
+            }
+            sendJson(ex, 200, gson.toJson(movie.get()));
+
+        } catch (NumberFormatException e) {
+            String errorJson = gson.toJson(new ErrorResponse("Некорректный ID"));
+            sendJson(ex, 400, errorJson);
+        }
+    }
+
+    private void handleGetMoviesByYear(HttpExchange ex) throws IOException {
+        String query = ex.getRequestURI().getQuery();
+        try {
+            int year = Integer.parseInt(query.substring(query.indexOf('=') + 1));
+            List<Movie> movies = store.getMovies().stream()
+                    .filter(movie -> movie.getYear() == year)
+                    .toList();
+
+            sendJson(ex, 200, gson.toJson(movies));
+        } catch (NumberFormatException e) {
+            String errorJson = gson.toJson(new ErrorResponse("Некорректный параметр запроса — 'year'"));
+            sendJson(ex, 400, errorJson);
+        }
+    }
+
+    private void handlePostMovie(HttpExchange ex) {
+
+    }
+
 
     private Endpoint getEndpoint(String requestPath, String requestMethod, String query) {
         String[] pathParts = requestPath.split("/");
