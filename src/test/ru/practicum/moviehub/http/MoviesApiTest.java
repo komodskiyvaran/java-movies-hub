@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.practicum.moviehub.model.Movie;
 
-import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -501,7 +500,7 @@ public class MoviesApiTest {
 
         assertEquals("Метод не поддерживается", error);
     }
-    
+
     private void assertContentType(HttpResponse<?> response) {
         String contentType = response.headers().firstValue("Content-Type").orElse("");
         assertEquals("application/json; charset=UTF-8", contentType);
