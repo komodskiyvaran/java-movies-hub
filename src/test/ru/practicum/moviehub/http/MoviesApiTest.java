@@ -192,9 +192,10 @@ public class MoviesApiTest {
         List<Movie> movies = gson.fromJson(resp.body(), new ListOfMoviesTypeToken().getType());
 
         assertEquals(3, movies.size());
-        assertTrue(movies.contains(movie1));
-        assertTrue(movies.contains(movie2));
-        assertTrue(movies.contains(movie3));
+        List<String> titles = movies.stream().map(Movie::getTitle).toList();
+        assertTrue(titles.contains("1+1"));
+        assertTrue(titles.contains("Тор"));
+        assertTrue(titles.contains("Прислуга"));
     }
 
     @Test

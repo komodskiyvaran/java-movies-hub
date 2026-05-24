@@ -10,7 +10,8 @@ public class MoviesStore {
     private final List<Movie> store = new ArrayList<>();
 
     public Movie add(Movie movie) {
-        Movie newMovie = new Movie(movie.getTitle(), movie.getYear());
+        int newId = store.size();
+        Movie newMovie = new Movie(newId, movie.getTitle(), movie.getYear());
         store.add(newMovie);
         return newMovie;
     }

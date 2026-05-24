@@ -15,6 +15,12 @@ public class Movie {
         this.year = year;
     }
 
+    public Movie(int id, String title, int year) {
+        this.id = id;
+        this.title = title;
+        this.year = year;
+    }
+
     public String getTitle() {
         return title;
     }
