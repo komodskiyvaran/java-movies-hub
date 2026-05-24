@@ -10,8 +10,9 @@ public class MoviesStore {
     private final List<Movie> store = new ArrayList<>();
 
     public Movie add(Movie movie) {
-        store.add(movie);
-        return movie;
+        Movie newMovie = new Movie(movie.getTitle(), movie.getYear());
+        store.add(newMovie);
+        return newMovie;
     }
 
     public Optional<Movie> getById(int id) {
@@ -36,6 +37,6 @@ public class MoviesStore {
 
     public void clear() {
         store.clear();
-        Movie.resetNextId();  // нужен метод в Movie
+        Movie.resetNextId();
     }
 }

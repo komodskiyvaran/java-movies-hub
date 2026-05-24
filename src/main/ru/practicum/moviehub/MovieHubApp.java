@@ -1,12 +1,12 @@
 package ru.practicum.moviehub;
 
 
-import ru.practicum.moviehub.store.MoviesStore;
+import ru.practicum.moviehub.http.MoviesServer;
 
 public class MovieHubApp {
     public static void main(String[] args) {
-        //final MoviesServer server = new MoviesServer(new MoviesStore(), 8080);
-        //Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
-        //server.start();
+        final MoviesServer server = new MoviesServer();
+        Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
+        server.start();
     }
 }

@@ -13,7 +13,6 @@ public class MoviesServer {
 
     public MoviesServer() {
         try {
-            // создайте сервер
             server = HttpServer.create(new InetSocketAddress(PORT), 0);
 
             this.store = new MoviesStore();
@@ -26,12 +25,10 @@ public class MoviesServer {
 
     public void start() {
         server.start();
-        System.out.println("Сервер запущен");
     }
 
     public void stop() {
         server.stop(1);
-        System.out.println("Сервер остановлен");
     }
 
     public MoviesStore getStore() {

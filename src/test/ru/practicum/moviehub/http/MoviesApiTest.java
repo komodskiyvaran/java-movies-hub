@@ -1,15 +1,13 @@
 package ru.practicum.moviehub.http;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.practicum.moviehub.model.Movie;
 
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -17,10 +15,11 @@ import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MoviesApiTest {
     private static final String BASE = "http://localhost:8080";
@@ -72,9 +71,11 @@ public class MoviesApiTest {
     void getMovies_returnArrayMovies() throws Exception {
         Movie movie1 = new Movie("1+1", 2011);
         Movie movie2 = new Movie("Форрест Гамп", 1994);
+        Movie movie3 = new Movie("Человек Дождя", 1988);
 
         server.getStore().add(movie1);
         server.getStore().add(movie2);
+        server.getStore().add(movie3);
 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
@@ -84,24 +85,29 @@ public class MoviesApiTest {
         HttpResponse<String> resp =
                 client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
 
-        assertEquals(200, resp.statusCode(), "GET /movies должен вернуть 200");
+        assertEquals(200, resp.statusCode());
         assertContentType(resp);
 
-        Movie[] movies = gson.fromJson(resp.body(), Movie[].class);
+        List<Movie> movieList = gson.fromJson(resp.body(), new ListOfMoviesTypeToken().getType());
 
-        assertEquals(2, movies.length);
-
-        assertTrue(List.of(movies).contains(movie1));
-        assertTrue(List.of(movies).contains(movie2));
+        assertEquals(3, movieList.size());
+        assertTrue(movieList.contains(movie1));
+        assertTrue(movieList.contains(movie2));
+        assertTrue(movieList.contains(movie3));
     }
 
     @Test
     void getMoviesById_returnsMovie() throws Exception {
-        server.getStore().add(new Movie("1+1",2011));
-        server.getStore().add(new Movie("Форрест Гамп",1994));
-        server.getStore().add(new Movie("Зелёная миля",1990));
+        Movie movie1 = new Movie("1+1", 2011);
+        Movie movie2 = new Movie("Форрест Гамп", 1994);
+        Movie movie3 = new Movie("Зелёная миля", 1990);
+
+        server.getStore().add(movie1);
+        server.getStore().add(movie2);
+        server.getStore().add(movie3);
+
         HttpRequest req = HttpRequest.newBuilder()
-                .uri(URI.create(BASE + "/movies/2"))
+                .uri(URI.create(BASE + "/movies/" + movie3.getId()))
                 .GET()
                 .build();
 
@@ -138,6 +144,7 @@ public class MoviesApiTest {
 
         JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
         String error = jsonObject.get("error").getAsString();
+
         assertEquals("Фильм не найден", error);
     }
 
@@ -156,6 +163,7 @@ public class MoviesApiTest {
 
         JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
         String error = jsonObject.get("error").getAsString();
+
         assertEquals("Некорректный ID", error);
     }
 
@@ -163,7 +171,7 @@ public class MoviesApiTest {
     void getMoviesByYear_returnsMovies() throws Exception {
         Movie movie1 = new Movie("1+1", 2011);
         Movie movie2 = new Movie("Тор", 2011);
-        Movie movie3 = new Movie("Тор", 2011);
+        Movie movie3 = new Movie("Прислуга", 2011);
 
         server.getStore().add(movie1);
         server.getStore().add(new Movie("Форрест Гамп",1994));
@@ -182,14 +190,40 @@ public class MoviesApiTest {
         assertEquals(200, resp.statusCode());
         assertContentType(resp);
 
-        Movie[] movies = gson.fromJson(resp.body(), Movie[].class);
+        List<Movie> movies = gson.fromJson(resp.body(), new ListOfMoviesTypeToken().getType());
 
-        assertEquals(3, movies.length);
-
-        assertTrue(List.of(movies).contains(movie1));
-        assertTrue(List.of(movies).contains(movie2));
-        assertTrue(List.of(movies).contains(movie3));
+        assertEquals(3, movies.size());
+        assertTrue(movies.contains(movie1));
+        assertTrue(movies.contains(movie2));
+        assertTrue(movies.contains(movie3));
     }
+
+    @Test
+    void getMoviesByYear_404returns_NotFound() throws Exception {
+        Movie movie1 = new Movie("1+1", 2011);
+        Movie movie2 = new Movie("Тор", 2011);
+        Movie movie3 = new Movie("Прислуга", 2011);
+
+        server.getStore().add(movie1);
+        server.getStore().add(movie2);
+        server.getStore().add(movie3);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies?year=2013"))
+                .GET()
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+
+        assertEquals(200, resp.statusCode());
+        assertContentType(resp);
+
+        List<Movie> movies = gson.fromJson(resp.body(), new ListOfMoviesTypeToken().getType());
+
+        assertEquals(0, movies.size());
+    }
+
     @Test
     void getMoviesByYear_returnsBadRequest() throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
@@ -205,12 +239,70 @@ public class MoviesApiTest {
 
         JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
         String error = jsonObject.get("error").getAsString();
+
         assertEquals("Некорректный параметр запроса — 'year'", error);
     }
 
-    //@Test
-    void postMovie_whenValid_returns201AndMovie() throws Exception {
-        String jsonMovie = "{\"title\":\"Интерстеллар\",\"year\":2014}";
+    @Test
+    void postMovie_whenValid_returns201_Create() throws Exception {
+        Movie movie = new Movie("Интерстеллар", 2014);
+        String jsonMovie = gson.toJson(movie);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonMovie))
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+        assertContentType(resp);
+        assertEquals(201, resp.statusCode());
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+
+        assertTrue(jsonObject.has("id"));
+        assertEquals("Интерстеллар", jsonObject.get("title").getAsString());
+        assertEquals(2014, jsonObject.get("year").getAsInt());
+        assertEquals(1, server.getStore().getMovies().size());
+    }
+
+    @Test
+    void postMovie_returns422_EmptyTitle() throws Exception {
+        Movie movie = new Movie(" ", 2001);
+        String jsonMovie = gson.toJson(movie);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonMovie))
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+        assertContentType(resp);
+        assertEquals(422, resp.statusCode());
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+
+        assertEquals("Ошибка валидации", error);
+
+        JsonArray details = jsonObject.get("details").getAsJsonArray();
+
+        assertEquals(1, details.size());
+        assertTrue(details.toString().contains("название не должно быть пустым"));
+        assertEquals(0, server.getStore().getMovies().size());
+    }
+
+    @Test
+    void postMovie_returns422_TooMachTitle() throws Exception {
+        char[] chars = new char[101];
+        Arrays.fill(chars, 'f'); // Можно задать конкретный символ
+        String title = new String(chars);
+
+        Movie movie = new Movie(title, 2001);
+        String jsonMovie = gson.toJson(movie);
 
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(BASE + "/movies"))
@@ -222,16 +314,194 @@ public class MoviesApiTest {
                 client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
         assertContentType(resp);
 
+        assertEquals(422, resp.statusCode());
+
         JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+        assertEquals("Ошибка валидации", error);
 
-        assertTrue(jsonObject.has("id"));
-        assertEquals("Интерстеллар", jsonObject.get("title").getAsString());
-        assertEquals(2014, jsonObject.get("year").getAsInt());
+        JsonArray details = jsonObject.get("details").getAsJsonArray();
 
-        assertEquals(1, server.getStore().getMovies().size());
+        assertEquals(1, details.size());
+        assertTrue(details.toString().contains("название слишком большое"));
+        assertEquals(0, server.getStore().getMovies().size());
     }
 
+    @Test
+    void postMovie_returns422_InvalidYearAndEmptyTitle() throws Exception {
+        Movie movie = new Movie(" ", 2042);
+        String jsonMovie = gson.toJson(movie);
 
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonMovie))
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+        assertContentType(resp);
+
+        assertEquals(422, resp.statusCode());
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+        assertEquals("Ошибка валидации", error);
+
+        JsonArray details = jsonObject.get("details").getAsJsonArray();
+
+        assertEquals(2, details.size());
+        assertTrue(details.toString().contains("название не должно быть пустым"));
+        assertTrue(details.toString().contains("год должен быть между 1888 и " + (LocalDate.now().getYear() + 1)));
+
+        assertEquals(0, server.getStore().getMovies().size());
+    }
+
+    @Test
+    void postMovie_returns415_UnsupportedMediaType() throws Exception {
+        Movie movie = new Movie("Прислуга", 2011);
+        String jsonMovie = gson.toJson(movie);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .header("Content-Type", "application/html")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonMovie))
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+
+        assertEquals(415, resp.statusCode());
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+
+        assertEquals("Неподдерживаемый Content-Type", error);
+        assertEquals(0, server.getStore().getMovies().size());
+    }
+
+    @Test
+    void postMovie_returns400_InvalidJson() throws Exception {
+        String invalidJson = "{\"title\":\"Интерстеллар\", \"year\":}";
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(invalidJson))
+                .build();
+
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+
+        assertEquals(400, resp.statusCode());
+        assertContentType(resp);
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+
+        assertEquals("Некорректный JSON", error);
+        assertEquals(0, server.getStore().getMovies().size());
+    }
+
+    @Test
+    void deleteMovie_returns204_NoContent() throws  Exception {
+        Movie movie1 = new Movie("1+1", 2011);
+        Movie movie2 = new Movie("Корпорация монстров", 2001);
+        Movie movie3 = new Movie("Валли", 2008);
+
+        server.getStore().add(movie1);
+        server.getStore().add(movie2);
+        server.getStore().add(movie3);
+
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/" + movie2.getId()))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+
+        assertEquals(204, resp.statusCode());
+        assertTrue(resp.body().isEmpty());
+
+        List<Movie> movies = server.getStore().getMovies();
+
+        assertEquals(2, movies.size());
+        assertTrue(movies.contains(movie1));
+        assertFalse(movies.contains(movie2));
+        assertTrue(movies.contains(movie3));
+    }
+
+    @Test
+    void deleteMovie_returns404_NotFound() throws  Exception {
+        Movie movie1 = new Movie("1+1", 2011);
+        Movie movie2 = new Movie("Корпорация монстров", 2001);
+
+        Movie movieNotMovieStore = new Movie("Валли", 2008);
+
+        server.getStore().add(movie1);
+        server.getStore().add(movie2);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/" + movieNotMovieStore.getId()))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+
+        assertEquals(404, resp.statusCode());
+        assertEquals(2, server.getStore().getMovies().size());
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+
+        assertEquals("Фильм не найден", error);
+    }
+
+    @Test
+    void deleteMovie_returns400_invalidID() throws Exception {
+        Movie movie1 = new Movie("1+1", 2011);
+        Movie movie2 = new Movie("Корпорация монстров", 2001);
+
+        server.getStore().add(movie1);
+        server.getStore().add(movie2);
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies/2F"))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> resp =
+                client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+
+        assertEquals(400, resp.statusCode());
+        assertEquals(2, server.getStore().getMovies().size());
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+
+        assertEquals("Некорректный ID", error);
+    }
+
+    @Test
+    void methodNotAllowed_returns405() throws Exception {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(BASE + "/movies"))
+                .PUT(HttpRequest.BodyPublishers.noBody())
+                .build();
+
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(DEFAULT_CHARSET));
+
+        assertEquals(405, resp.statusCode());
+        assertEquals("GET, POST, DELETE", resp.headers().firstValue("Allow").orElse(""));
+
+        JsonObject jsonObject = JsonParser.parseString(resp.body()).getAsJsonObject();
+        String error = jsonObject.get("error").getAsString();
+
+        assertEquals("Метод не поддерживается", error);
+    }
+    
     private void assertContentType(HttpResponse<?> response) {
         String contentType = response.headers().firstValue("Content-Type").orElse("");
         assertEquals("application/json; charset=UTF-8", contentType);
