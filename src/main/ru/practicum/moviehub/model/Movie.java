@@ -3,17 +3,9 @@ package ru.practicum.moviehub.model;
 import java.util.Objects;
 
 public class Movie {
-    private static int nextId;
-
     private final String title;
     private final int year;
     private final int id;
-
-    public Movie(String movie, int year) {
-        this.id = nextId++;
-        this.title = movie;
-        this.year = year;
-    }
 
     public Movie(int id, String title, int year) {
         this.id = id;
@@ -55,9 +47,5 @@ public class Movie {
     @Override
     public int hashCode() {
         return Objects.hash(title, year, id);
-    }
-
-    public static void resetNextId() {
-        nextId = 0;
     }
 }

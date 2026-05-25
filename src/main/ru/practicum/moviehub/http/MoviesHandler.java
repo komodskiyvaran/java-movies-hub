@@ -17,6 +17,11 @@ import java.util.Optional;
 
 
 public class MoviesHandler extends BaseHttpHandler implements HttpHandler {
+    private static final int MIN_YEAR = 1888;
+    private static final int MAX_YEAR_OFFSET = 1;
+    private static final int MAX_TITLE_LENGTH = 100;
+
+
     private final MoviesStore store;
     private final Gson gson = new Gson();
 
@@ -97,13 +102,13 @@ public class MoviesHandler extends BaseHttpHandler implements HttpHandler {
         if (newMovie.getTitle() == null || newMovie.getTitle().trim().isEmpty()) {
             details.add("название не должно быть пустым");
         }
-        if (newMovie.getTitle().length() > 100) {
+        if (newMovie.getTitle().length() > MAX_TITLE_LENGTH) {
             details.add("название слишком большое");
         }
 
-        int maxYear = LocalDate.now().getYear() + 1;
-        if (newMovie.getYear() < 1888 || newMovie.getYear() > maxYear) {
-            details.add("год должен быть между 1888 и " + maxYear);
+        int maxYear = LocalDate.now().getYear() + MAX_YEAR_OFFSET;
+        if (newMovie.getYear() < MIN_YEAR || newMovie.getYear() > maxYear) {
+            details.add("год должен быть между " + MIN_YEAR + " и " + maxYear);
         }
 
         if (!details.isEmpty()) {

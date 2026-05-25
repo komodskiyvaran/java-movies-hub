@@ -10,6 +10,8 @@ public class MoviesServer {
     private final HttpServer server;
     private final MoviesStore store;
     private static final int PORT = 8080;
+    public static final String MOVIES_PATH = "/movies";
+
 
     public MoviesServer() {
         try {
@@ -17,7 +19,7 @@ public class MoviesServer {
 
             this.store = new MoviesStore();
             MoviesHandler handler = new MoviesHandler(this.store);
-            server.createContext("/movies", handler);
+            server.createContext(MOVIES_PATH, handler);
         } catch (IOException e) {
             throw new RuntimeException("Не удалось создать HTTP-сервер", e);
         }
